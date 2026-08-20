@@ -3,13 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <!-- Configuración PWA -->
-<link rel="manifest" href="manifest.json">
+<link rel="manifest" href="manifest.json?v=2">
 <meta name="theme-color" content="#1a365d">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="CJTA Pedidos">
-<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png?v=2">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Hoja de Pedido - Distribuidora CJTA</title>
 <!-- Librerías base -->
@@ -117,7 +117,11 @@
 
 <div class="app-container">
   <div class="app-header">
-    <img id="app-logo-img" src="logo.jpg" alt="Logo CJTA" onerror="this.style.display='none'">
+    <svg width="140" height="60" viewBox="0 0 200 100" style="margin: 0 auto 8px auto; display: block;">
+      <rect width="200" height="100" fill="#1a365d" rx="10" ry="10"/>
+      <text x="100" y="45" font-family="Arial, sans-serif" font-size="24" fill="#ffffff" text-anchor="middle" font-weight="bold">CJTA</text>
+      <text x="100" y="70" font-family="Arial, sans-serif" font-size="12" fill="#cbd5e1" text-anchor="middle">Lubricantes CARK</text>
+    </svg>
     <h1>DISTRIBUIDORA CJTA</h1>
     <h2>LUBRICANTES CARK - HOJA DE PEDIDO</h2>
   </div>
@@ -224,9 +228,8 @@
 </div>
 
 <script>
-// ========== CATÁLOGO DE PRODUCTOS (con precios en USD y BCV-USD) ==========
+// ========== CATÁLOGO DE PRODUCTOS ==========
 const catalog = [
-  // CAJAS 12x0.946L
   { cat: "CAJAS 12x0.946L", code: "C3-SC-SL15W40", name: "Super Cark SL 15W40", present: "Caja 12 x 0.946 L", priceUSD: 68, priceBCV: 85 },
   { cat: "CAJAS 12x0.946L", code: "C3-SC-SL20W50", name: "Super Cark SL 20W50", present: "Caja 12 x 0.946 L", priceUSD: 68, priceBCV: 85 },
   { cat: "CAJAS 12x0.946L", code: "C3-SC-SL25W60", name: "Super Cark SL 25W60", present: "Caja 12 x 0.946 L", priceUSD: 68, priceBCV: 85 },
@@ -242,7 +245,6 @@ const catalog = [
   { cat: "CAJAS 12x0.946L", code: "C3-MC-TCW3", name: "Marino Cark TCW3", present: "Caja 12 x 0.946 L", priceUSD: 85, priceBCV: 107 },
   { cat: "CAJAS 12x0.946L", code: "C3-FC-68", name: "Frio Cark 68", present: "Caja 12 x 0.946 L", priceUSD: 67, priceBCV: 84 },
 
-  // BIDONES 19L
   { cat: "BIDONES 19L", code: "BD-SC-SL15W40", name: "Super Cark SL 15W40", present: "Bidón 19 L", priceUSD: 97, priceBCV: 122 },
   { cat: "BIDONES 19L", code: "BD-SC-SL20W50", name: "Super Cark SL 20W50", present: "Bidón 19 L", priceUSD: 97, priceBCV: 122 },
   { cat: "BIDONES 19L", code: "BD-MD-CF50", name: "Megadiesel CF-50", present: "Bidón 19 L", priceUSD: 99, priceBCV: 124 },
@@ -252,7 +254,6 @@ const catalog = [
   { cat: "BIDONES 19L", code: "BD-TC-80W90", name: "Transcark 80W90 GL-5", present: "Bidón 19 L", priceUSD: 110, priceBCV: 138 },
   { cat: "BIDONES 19L", code: "BD-FC-68", name: "Friocark 68", present: "Bidón 19 L", priceUSD: 88, priceBCV: 110 },
 
-  // PAILAS 19L
   { cat: "PAILAS 19L", code: "PA-MD-CF50", name: "Megadiesel CF 50", present: "Paila 19 L", priceUSD: 100, priceBCV: 125 },
   { cat: "PAILAS 19L", code: "PA-OP-CI4-15W40", name: "Optimus CI4 15W40", present: "Paila 19 L", priceUSD: 104, priceBCV: 130 },
   { cat: "PAILAS 19L", code: "PA-SC-SL15W40", name: "Super Cark SL 15W40", present: "Paila 19 L", priceUSD: 100, priceBCV: 125 },
@@ -277,7 +278,6 @@ const catalog = [
   { cat: "PAILAS 19L", code: "PA-FC-68", name: "Friocark 68", present: "Paila 19 L", priceUSD: 89, priceBCV: 112 },
   { cat: "PAILAS 19L", code: "PA-TF", name: "Tracto Fluido", present: "Paila 19 L", priceUSD: 101, priceBCV: 127 },
 
-  // GRASAS Y ESPECIALIDADES
   { cat: "GRASAS TARRO 6x250g", code: "TR-GC-250G", name: "Grasa Chasis II Azul 6x250g", present: "6 x 250 g", priceUSD: 13, priceBCV: 17 },
   { cat: "GRASAS TARRO 6x250g", code: "TR-EP-250G", name: "Grasa EP 2 Base Litio 6x250g", present: "6 x 250 g", priceUSD: 17, priceBCV: 22 },
   { cat: "GRASAS CARTUCHO 12x400g", code: "CT-EP-400G", name: "Grasa EP 2 Base Litio 12x400g", present: "12 x 400 g", priceUSD: 55, priceBCV: 69 },
@@ -291,7 +291,6 @@ const catalog = [
   { cat: "GRASAS TAMBOR 181.5kg", code: "TBG-EP-181K", name: "Grasa EP 2 Base Litio 181.5 kg", present: "181,5 Kg", priceUSD: 1307, priceBCV: 1634 },
   { cat: "GRASAS TAMBOR 181.5kg", code: "TBG-GM-181K", name: "Grasa MP2 Base Litio 181.5 kg", present: "181,5 Kg", priceUSD: 1266, priceBCV: 1583 },
 
-  // TAMBOR 208L
   { cat: "TAMBOR 208L", code: "TB-SST-10W30", name: "Titanium SS 10W30", present: "Tambor 208 L", priceUSD: 1194, priceBCV: 1493 },
   { cat: "TAMBOR 208L", code: "TB-SST-15W40", name: "Titanium SS 15W40", present: "Tambor 208 L", priceUSD: 1194, priceBCV: 1493 },
   { cat: "TAMBOR 208L", code: "TB-SST-20W50", name: "Titanium SS 20W50", present: "Tambor 208 L", priceUSD: 1194, priceBCV: 1493 },
@@ -333,7 +332,6 @@ const catalog = [
   { cat: "TAMBOR 208L", code: "TB-PC-100", name: "Puro Cark 100", present: "Tambor 208 L", priceUSD: 997, priceBCV: 1247 },
   { cat: "TAMBOR 208L", code: "TB-FC-68", name: "Friocark 68", present: "Tambor 208 L", priceUSD: 911, priceBCV: 1139 },
 
-  // A GRANEL (Precio/Litro)
   { cat: "A GRANEL", code: "GR-SST-15W40", name: "Titanium SN 15W40", present: "Litro", priceUSD: 4.85, priceBCV: 6.07 },
   { cat: "A GRANEL", code: "GR-SST-20W50", name: "Titanium SN 20W50", present: "Litro", priceUSD: 4.86, priceBCV: 6.08 },
   { cat: "A GRANEL", code: "GR-SC-SL15W40", name: "Super Cark SL 15W40", present: "Litro", priceUSD: 4.49, priceBCV: 5.62 },
@@ -543,7 +541,7 @@ window.addEventListener('DOMContentLoaded', () => {
   function resizeCanvas() {
     const container = canvas.parentElement;
     const width = container.offsetWidth - 10;
-    const height = 120; // Altura fija
+    const height = 120;
     const ratio = Math.max(window.devicePixelRatio || 1, 1);
     canvas.width = width * ratio;
     canvas.height = height * ratio;
@@ -833,7 +831,7 @@ document.getElementById('app-pago').addEventListener('change', () => {
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('service-worker.js')
+      navigator.serviceWorker.register('service-worker.js?v=2')
         .then(registration => {
           console.log('Service Worker registrado con éxito:', registration.scope);
         })
