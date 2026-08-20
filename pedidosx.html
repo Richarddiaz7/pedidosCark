@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<!-- Configuración PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1a365d">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="CJTA Pedidos">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hoja de Pedido - Distribuidora CJTA</title>
+<!-- Librerías base -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<!-- Librerías adicionales -->
+<script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+
+<style>
+  /* ====== ESTILOS GENERALES ====== */
+  body { font-family: Arial, sans-serif; background-color: #f4f6f9; margin: 0; padding: 10px; color: #333; }
+  .app-container { max-width: 650px; margin: 0 auto; background: #fff; border-radius: 12px; padding: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+
+  .app-header { text-align: center; border-bottom: 2px solid #1a365d; padding-bottom: 10px; margin-bottom: 15px; }
+  .app-header img { max-width: 140px; height: auto; display: block; margin: 0 auto 8px auto; }
+  .app-header h1 { font-size: 18px; color: #1a365d; margin: 5px 0 0 0; text-transform: uppercase; font-weight: bold; }
+  .app-header h2 { font-size: 13px; color: #4a5568; margin: 2px 0 0 0; }
+
+  .form-group { margin-bottom: 12px; }
+  label { font-size: 12px; font-weight: bold; color: #2d3748; display: block; margin-bottom: 4px; }
+  input[type="text"], input[type="number"], select, textarea { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; box-sizing: border-box; }
+
+  .product-search { margin-bottom: 15px; background: #edf2f7; padding: 12px; border-radius: 8px; border: 1px solid #cbd5e1; }
+  .product-search input { background: #fff; font-size: 15px; }
+
+  .product-list { max-height: 400px; overflow-y: auto; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff; }
+  .product-item { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; padding: 10px; border-bottom: 1px solid #edf2f7; }
+  .product-item:last-child { border-bottom: none; }
+  .product-info { font-size: 13px; flex-grow: 1; padding-right: 10px; }
+  .product-category { display: inline-block; background: #e2e8f0; color: #2d3748; font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-bottom: 3px; font-weight: bold; }
+  .product-prices { display: flex; gap: 6px; align-items: center; margin-top: 4px; }
+  .price-field { display: flex; align-items: center; }
+  .price-field span { margin-right: 2px; font-weight: bold; }
+  .product-prices input { width: 70px; padding: 4px; font-size: 12px; text-align: right; }
+
+  .product-qty { width: 70px; }
+  .product-qty input { padding: 8px; text-align: center; font-weight: bold; width: 100%; box-sizing: border-box; border: 1px solid #a0aec0; border-radius: 6px; font-size: 15px; }
+
+  .btn-generate { width: 100%; background-color: #25d366; color: #fff; border: none; padding: 15px; font-size: 16px; font-weight: bold; border-radius: 8px; cursor: pointer; margin-top: 15px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .btn-generate:active { background-color: #1eb954; }
+  .btn-generate:disabled { background-color: #a0aec0; cursor: not-allowed; }
+
+  .btn-secondary { background-color: #3498db; color: #fff; border: none; padding: 8px 12px; font-size: 13px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+  .btn-secondary:active { background-color: #2980b9; }
+
+  .totals-section { background: #edf2f7; padding: 12px; border-radius: 8px; margin-top: 15px; }
+  .total-item { display: flex; justify-content: space-between; font-size: 14px; margin: 4px 0; }
+  .total-item span:first-child { font-weight: bold; }
+  .total-usd { color: #1a365d; font-weight: bold; }
+  .total-ves { color: #c0392b; font-weight: bold; }
+
+  /* ====== ESTILOS PARA LA FIRMA ====== */
+  .signature-container { 
+    border: 1px solid #cbd5e1; 
+    border-radius: 6px; 
+    background: #fafafa; 
+    padding: 5px; 
+    max-width: 100%; 
+    overflow: hidden; 
+  }
+  .signature-canvas { 
+    width: 100%; 
+    max-width: 100%; 
+    height: 120px; 
+    border: 1px dashed #a0aec0; 
+    border-radius: 4px; 
+    background: #fff; 
+    display: block; 
+    touch-action: none; 
+  }
+
+  /* ====== PLANTILLA PDF ====== */
+  .pdf-temp-container { position: fixed; top: 0; left: 0; width: 750px; z-index: -1; background: white; opacity: 1; pointer-events: none; }
+  .pdf-page { width: 750px; padding: 20px; font-family: Arial, sans-serif; font-size: 11px; background: #fff; color: #000; box-sizing: border-box; }
+  .pdf-header { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 12px; }
+  .pdf-logo-container { width: 120px; min-width: 120px; min-height: 60px; }
+  .pdf-logo { width: 110px; height: auto; display: block; }
+  .pdf-title { text-align: center; flex-grow: 1; }
+  .pdf-title h1 { font-size: 16px; margin: 0; font-weight: bold; }
+  .pdf-title h2 { font-size: 12px; margin: 2px 0 0 0; }
+  .pdf-qr-container { width: 80px; min-width: 80px; min-height: 80px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .pdf-qr-container img { width: 70px; height: 70px; }
+  .pdf-qr-label { font-size: 8px; margin-top: 2px; }
+
+  .pdf-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+  .pdf-table th, .pdf-table td { border: 1px solid #444; padding: 5px; font-size: 10px; text-align: left; }
+  .pdf-table th { background: #e6e6e6; font-weight: bold; }
+  .center { text-align: center; }
+  .pdf-footer { border: 1px solid #444; padding: 8px; background: #fafafa; margin-top: 10px; font-size: 10px; }
+
+  .pdf-totals { margin: 10px 0; padding: 8px; border: 1px solid #444; background: #fafafa; font-size: 10px; }
+  .pdf-signature-section { display: flex; justify-content: space-between; margin-top: 20px; }
+  .pdf-signature-box { width: 48%; min-width: 120px; min-height: 120px; border: 1px solid #444; padding: 8px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .pdf-signature-box img { max-width: 100%; max-height: 80px; margin-bottom: 5px; }
+  .pdf-signature-box .label { font-size: 9px; font-weight: bold; margin-top: 5px; }
+
+  @media (max-width: 480px) {
+    .signature-canvas { height: 100px; }
+    .product-prices input { width: 60px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app-container">
+  <div class="app-header">
+    <img id="app-logo-img" src="logo.jpg" alt="Logo CJTA" onerror="this.style.display='none'">
+    <h1>DISTRIBUIDORA CJTA</h1>
+    <h2>LUBRICANTES CARK - HOJA DE PEDIDO</h2>
+  </div>
+
+  <div class="form-group">
+    <label>Cliente:</label>
+    <input type="text" id="app-cliente" placeholder="Nombre o Razón Social del Cliente">
+  </div>
+
+  <div style="display: flex; gap: 10px;">
+    <div class="form-group" style="flex: 1;">
+      <label>RIF:</label>
+      <input type="text" id="app-rif" placeholder="J-12345678-9">
+    </div>
+    <div class="form-group" style="flex: 1;">
+      <label>Vendedor:</label>
+      <input type="text" id="app-vendedor" placeholder="Nombre del Vendedor">
+    </div>
+  </div>
+
+  <div class="form-group">
+    <label>📍 Ubicación en Google Maps (URL):</label>
+    <input type="text" id="app-location" placeholder="https://maps.app.goo.gl/...">
+  </div>
+
+  <div class="product-search">
+    <label>🔍 Buscar Producto:</label>
+    <input type="text" id="search-input" placeholder="Escribe para buscar..." oninput="filterProducts()">
+  </div>
+
+  <label>Lista de Productos (Ingresa cantidad y ajusta precios si es necesario):</label>
+  <div class="product-list" id="product-list-container"></div>
+
+  <div style="margin-top: 15px;">
+    <label>Forma de Pago:</label>
+    <select id="app-pago">
+      <option value="Contado en dólares">Contado en dólares</option>
+      <option value="Crédito en dólares">Crédito en dólares</option>
+      <option value="Contado en bolívares">Contado en bolívares</option>
+      <option value="Crédito en bolívares">Crédito en bolívares</option>
+    </select>
+  </div>
+
+  <div class="form-group" style="margin-top: 10px;">
+    <label>Visualización de precios en el PDF:</label>
+    <select id="app-price-display">
+      <option value="ambos">Mostrar ambos precios (USD y Bs.)</option>
+      <option value="pago">Mostrar solo moneda de pago</option>
+    </select>
+  </div>
+
+  <div style="display: flex; gap: 10px; margin-top: 10px;">
+    <div class="form-group" style="flex: 1;">
+      <label>Días de Crédito:</label>
+      <input type="text" id="app-dias" placeholder="0">
+    </div>
+    <div class="form-group" style="flex: 1;">
+      <label>Horario Recepción:</label>
+      <input type="text" id="app-horario" placeholder="Ej. 8:00 AM - 12:00 PM">
+    </div>
+  </div>
+
+  <div class="form-group">
+    <label>Observaciones / Condiciones de Venta:</label>
+    <textarea id="app-obs" rows="2" placeholder="Escribe o dicta cualquier detalle adicional..."></textarea>
+  </div>
+
+  <!-- TASA DE CAMBIO Y TOTALES -->
+  <div class="totals-section">
+    <div class="form-group" style="margin-bottom: 8px;">
+      <label>Tasa de Cambio (Bs. por USD):</label>
+      <input type="number" id="app-tasa" step="0.01" min="0" placeholder="Ej. 36.50" oninput="updateTotals()">
+    </div>
+    <div class="total-item">
+      <span>Total en USD ($):</span>
+      <span class="total-usd" id="total-usd">$0.00</span>
+    </div>
+    <div class="total-item">
+      <span>Total en Bolívares (Bs.):</span>
+      <span class="total-ves" id="total-ves">Bs. 0.00</span>
+    </div>
+  </div>
+
+  <!-- FIRMA DIGITAL -->
+  <div class="form-group" style="margin-top: 15px;">
+    <label>✍️ Firma del Cliente:</label>
+    <div class="signature-container">
+      <canvas id="signature-canvas" class="signature-canvas"></canvas>
+      <button type="button" class="btn-secondary" onclick="clearSignature()" style="margin-top: 5px;">🗑️ Limpiar firma</button>
+    </div>
+  </div>
+
+  <!-- CAPTURA DE SELLO -->
+  <div class="form-group">
+    <label>📸 Sello de la Empresa / Recepción:</label>
+    <button type="button" class="btn-secondary" onclick="document.getElementById('seal-input').click()">📷 Tomar foto o seleccionar de galería</button>
+    <input type="file" id="seal-input" accept="image/*" style="display: none;" onchange="handleSealUpload(event)">
+    <img id="seal-preview" class="seal-preview" alt="Vista previa del sello">
+  </div>
+
+  <button class="btn-generate" id="btn-generate" onclick="generatePDF()">
+    📄 GENERAR Y DESCARGAR PDF
+  </button>
+</div>
+
+<script>
+// ========== CATÁLOGO DE PRODUCTOS (con precios en USD y BCV-USD) ==========
+const catalog = [
+  // CAJAS 12x0.946L
+  { cat: "CAJAS 12x0.946L", code: "C3-SC-SL15W40", name: "Super Cark SL 15W40", present: "Caja 12 x 0.946 L", priceUSD: 68, priceBCV: 85 },
+  { cat: "CAJAS 12x0.946L", code: "C3-SC-SL20W50", name: "Super Cark SL 20W50", present: "Caja 12 x 0.946 L", priceUSD: 68, priceBCV: 85 },
+  { cat: "CAJAS 12x0.946L", code: "C3-SC-SL25W60", name: "Super Cark SL 25W60", present: "Caja 12 x 0.946 L", priceUSD: 68, priceBCV: 85 },
+  { cat: "CAJAS 12x0.946L", code: "C3-SST-10W30", name: "Titanium SS 10W30", present: "Caja 12 x 0.946 L", priceUSD: 78, priceBCV: 98 },
+  { cat: "CAJAS 12x0.946L", code: "C3-SST-15W40", name: "Titanium SS 15W40", present: "Caja 12 x 0.946 L", priceUSD: 78, priceBCV: 98 },
+  { cat: "CAJAS 12x0.946L", code: "C3-SST-20W50", name: "Titanium SS 20W50", present: "Caja 12 x 0.946 L", priceUSD: 78, priceBCV: 98 },
+  { cat: "CAJAS 12x0.946L", code: "C3-MOT-SL20W50", name: "4T Motocark SL 20W50", present: "Caja 12 x 0.946 L", priceUSD: 76, priceBCV: 95 },
+  { cat: "CAJAS 12x0.946L", code: "C3-MOT-SN15W50", name: "4T Motocark SN 15W50 Semi-Sintético", present: "Caja 12 x 0.946 L", priceUSD: 78, priceBCV: 98 },
+  { cat: "CAJAS 12x0.946L", code: "C2-M2T-JASO", name: "2T Motocark JASO (FB)", present: "Caja 12 x 0.946 L", priceUSD: 66, priceBCV: 83 },
+  { cat: "CAJAS 12x0.946L", code: "C3-TC-80W90", name: "Transcark 80W90 GL-5", present: "Caja 12 x 0.946 L", priceUSD: 80, priceBCV: 100 },
+  { cat: "CAJAS 12x0.946L", code: "C3-TC-85W140", name: "Transcark 85W140 GL-5", present: "Caja 12 x 0.946 L", priceUSD: 82, priceBCV: 103 },
+  { cat: "CAJAS 12x0.946L", code: "C3-CF-DXIII", name: "Caja Fluido Dexron III", present: "Caja 12 x 0.946 L", priceUSD: 68, priceBCV: 85 },
+  { cat: "CAJAS 12x0.946L", code: "C3-MC-TCW3", name: "Marino Cark TCW3", present: "Caja 12 x 0.946 L", priceUSD: 85, priceBCV: 107 },
+  { cat: "CAJAS 12x0.946L", code: "C3-FC-68", name: "Frio Cark 68", present: "Caja 12 x 0.946 L", priceUSD: 67, priceBCV: 84 },
+
+  // BIDONES 19L
+  { cat: "BIDONES 19L", code: "BD-SC-SL15W40", name: "Super Cark SL 15W40", present: "Bidón 19 L", priceUSD: 97, priceBCV: 122 },
+  { cat: "BIDONES 19L", code: "BD-SC-SL20W50", name: "Super Cark SL 20W50", present: "Bidón 19 L", priceUSD: 97, priceBCV: 122 },
+  { cat: "BIDONES 19L", code: "BD-MD-CF50", name: "Megadiesel CF-50", present: "Bidón 19 L", priceUSD: 99, priceBCV: 124 },
+  { cat: "BIDONES 19L", code: "BD-OP-CI4-15W40", name: "Optimus CI-4 15W40", present: "Bidón 19 L", priceUSD: 102, priceBCV: 128 },
+  { cat: "BIDONES 19L", code: "BD-MC-TCW3", name: "Marino Cark TCW3", present: "Bidón 19 L", priceUSD: 117, priceBCV: 147 },
+  { cat: "BIDONES 19L", code: "BD-HA-AW68", name: "Hidráulico AW 68", present: "Bidón 19 L", priceUSD: 93, priceBCV: 117 },
+  { cat: "BIDONES 19L", code: "BD-TC-80W90", name: "Transcark 80W90 GL-5", present: "Bidón 19 L", priceUSD: 110, priceBCV: 138 },
+  { cat: "BIDONES 19L", code: "BD-FC-68", name: "Friocark 68", present: "Bidón 19 L", priceUSD: 88, priceBCV: 110 },
+
+  // PAILAS 19L
+  { cat: "PAILAS 19L", code: "PA-MD-CF50", name: "Megadiesel CF 50", present: "Paila 19 L", priceUSD: 100, priceBCV: 125 },
+  { cat: "PAILAS 19L", code: "PA-OP-CI4-15W40", name: "Optimus CI4 15W40", present: "Paila 19 L", priceUSD: 104, priceBCV: 130 },
+  { cat: "PAILAS 19L", code: "PA-SC-SL15W40", name: "Super Cark SL 15W40", present: "Paila 19 L", priceUSD: 100, priceBCV: 125 },
+  { cat: "PAILAS 19L", code: "PA-SC-SL20W50", name: "Super Cark SL 20W50", present: "Paila 19 L", priceUSD: 100, priceBCV: 125 },
+  { cat: "PAILAS 19L", code: "PA-MC-TCW3", name: "Marino Cark TCW3", present: "Paila 19 L", priceUSD: 118, priceBCV: 148 },
+  { cat: "PAILAS 19L", code: "PA-HA-AW32", name: "Hidráulico AW 32", present: "Paila 19 L", priceUSD: 86, priceBCV: 108 },
+  { cat: "PAILAS 19L", code: "PA-HA-AW46", name: "Hidráulico AW 46", present: "Paila 19 L", priceUSD: 92, priceBCV: 115 },
+  { cat: "PAILAS 19L", code: "PA-HA-AW68", name: "Hidráulico AW 68", present: "Paila 19 L", priceUSD: 94, priceBCV: 118 },
+  { cat: "PAILAS 19L", code: "PA-HA-AW100", name: "Hidráulico AW 100", present: "Paila 19 L", priceUSD: 94, priceBCV: 118 },
+  { cat: "PAILAS 19L", code: "PA-HA-AW150", name: "Hidráulico AW 150", present: "Paila 19 L", priceUSD: 94, priceBCV: 118 },
+  { cat: "PAILAS 19L", code: "PA-CP-100", name: "Compressocark 100", present: "Paila 19 L", priceUSD: 97, priceBCV: 122 },
+  { cat: "PAILAS 19L", code: "PA-CP-150", name: "Compressocark 150", present: "Paila 19 L", priceUSD: 97, priceBCV: 122 },
+  { cat: "PAILAS 19L", code: "PA-CP-220", name: "Compressocark 220", present: "Paila 19 L", priceUSD: 99, priceBCV: 124 },
+  { cat: "PAILAS 19L", code: "PA-TC-80W90", name: "Transcark 80W90 GL-5", present: "Paila 19 L", priceUSD: 111, priceBCV: 139 },
+  { cat: "PAILAS 19L", code: "PA-TC-85W140", name: "Transcark 85W140 GL-5", present: "Paila 19 L", priceUSD: 114, priceBCV: 143 },
+  { cat: "PAILAS 19L", code: "PA-CF-DXIII", name: "Caja Fluido DXIII", present: "Paila 19 L", priceUSD: 100, priceBCV: 125 },
+  { cat: "PAILAS 19L", code: "PA-EN-150", name: "Engracark 150", present: "Paila 19 L", priceUSD: 97, priceBCV: 122 },
+  { cat: "PAILAS 19L", code: "PA-EN-220", name: "Engracark 220", present: "Paila 19 L", priceUSD: 99, priceBCV: 124 },
+  { cat: "PAILAS 19L", code: "PA-EN-320", name: "Engracark 320", present: "Paila 19 L", priceUSD: 100, priceBCV: 125 },
+  { cat: "PAILAS 19L", code: "PA-EN-460", name: "Engracark 460", present: "Paila 19 L", priceUSD: 102, priceBCV: 128 },
+  { cat: "PAILAS 19L", code: "PA-SB", name: "Solubcark", present: "Paila 19 L", priceUSD: 130, priceBCV: 163 },
+  { cat: "PAILAS 19L", code: "PA-FC-68", name: "Friocark 68", present: "Paila 19 L", priceUSD: 89, priceBCV: 112 },
+  { cat: "PAILAS 19L", code: "PA-TF", name: "Tracto Fluido", present: "Paila 19 L", priceUSD: 101, priceBCV: 127 },
+
+  // GRASAS Y ESPECIALIDADES
+  { cat: "GRASAS TARRO 6x250g", code: "TR-GC-250G", name: "Grasa Chasis II Azul 6x250g", present: "6 x 250 g", priceUSD: 13, priceBCV: 17 },
+  { cat: "GRASAS TARRO 6x250g", code: "TR-EP-250G", name: "Grasa EP 2 Base Litio 6x250g", present: "6 x 250 g", priceUSD: 17, priceBCV: 22 },
+  { cat: "GRASAS CARTUCHO 12x400g", code: "CT-EP-400G", name: "Grasa EP 2 Base Litio 12x400g", present: "12 x 400 g", priceUSD: 55, priceBCV: 69 },
+  { cat: "GRASAS MINI PAILA 3.5kg", code: "MP-GC-3K5", name: "Grasa Chasis II Azul 3.5 kg", present: "3,5 Kg", priceUSD: 22, priceBCV: 28 },
+  { cat: "GRASAS MINI PAILA 3.5kg", code: "MP-EP-3K5", name: "Grasa EP 2 Base Litio 3.5 kg", present: "3,5 Kg", priceUSD: 31, priceBCV: 39 },
+  { cat: "GRASAS MINI PAILA 3.5kg", code: "MP-GM-3K5", name: "Grasa MP2 Base Litio 3.5 kg", present: "3,5 Kg", priceUSD: 29, priceBCV: 37 },
+  { cat: "GRASAS PAILA 15.9kg", code: "PL-GC-15K9", name: "Grasa Chasis II Azul 15.9 kg", present: "15,9 Kg", priceUSD: 84, priceBCV: 105 },
+  { cat: "GRASAS PAILA 15.9kg", code: "PL-EP-15K9", name: "Grasa EP 2 Base Litio 15.9 kg", present: "15,9 Kg", priceUSD: 116, priceBCV: 145 },
+  { cat: "GRASAS PAILA 15.9kg", code: "PL-GM-15K9", name: "Grasa MP2 Base Litio 15.9 kg", present: "15,9 Kg", priceUSD: 112, priceBCV: 140 },
+  { cat: "GRASAS TAMBOR 181.5kg", code: "TBG-GC-181K", name: "Grasa Chasis II Azul 181.5 kg", present: "181,5 Kg", priceUSD: 925, priceBCV: 1157 },
+  { cat: "GRASAS TAMBOR 181.5kg", code: "TBG-EP-181K", name: "Grasa EP 2 Base Litio 181.5 kg", present: "181,5 Kg", priceUSD: 1307, priceBCV: 1634 },
+  { cat: "GRASAS TAMBOR 181.5kg", code: "TBG-GM-181K", name: "Grasa MP2 Base Litio 181.5 kg", present: "181,5 Kg", priceUSD: 1266, priceBCV: 1583 },
+
+  // TAMBOR 208L
+  { cat: "TAMBOR 208L", code: "TB-SST-10W30", name: "Titanium SS 10W30", present: "Tambor 208 L", priceUSD: 1194, priceBCV: 1493 },
+  { cat: "TAMBOR 208L", code: "TB-SST-15W40", name: "Titanium SS 15W40", present: "Tambor 208 L", priceUSD: 1194, priceBCV: 1493 },
+  { cat: "TAMBOR 208L", code: "TB-SST-20W50", name: "Titanium SS 20W50", present: "Tambor 208 L", priceUSD: 1194, priceBCV: 1493 },
+  { cat: "TAMBOR 208L", code: "TB-SC-SL15W40", name: "Super Cark SL 15W40", present: "Tambor 208 L", priceUSD: 1056, priceBCV: 1320 },
+  { cat: "TAMBOR 208L", code: "TB-SC-SL20W50", name: "Super Cark SL 20W50", present: "Tambor 208 L", priceUSD: 1056, priceBCV: 1320 },
+  { cat: "TAMBOR 208L", code: "TB-MC-TCW3", name: "Marino Cark TCW3", present: "Tambor 208 L", priceUSD: 1283, priceBCV: 1604 },
+  { cat: "TAMBOR 208L", code: "TB-MD-CF50", name: "Megadiesel CF-50", present: "Tambor 208 L", priceUSD: 1082, priceBCV: 1353 },
+  { cat: "TAMBOR 208L", code: "TB-OP-CI4-15W40", name: "Optimus CI-4 15W40", present: "Tambor 208 L", priceUSD: 1125, priceBCV: 1407 },
+  { cat: "TAMBOR 208L", code: "TB-OP-CI4-20W50", name: "Optimus CI-4 20W50", present: "Tambor 208 L", priceUSD: 1137, priceBCV: 1422 },
+  { cat: "TAMBOR 208L", code: "TB-TC-80W90", name: "Transcark 80W90 GL-5", present: "Tambor 208 L", priceUSD: 1203, priceBCV: 1504 },
+  { cat: "TAMBOR 208L", code: "TB-TC-85W140", name: "Transcark 85W140 GL-5", present: "Tambor 208 L", priceUSD: 1223, priceBCV: 1529 },
+  { cat: "TAMBOR 208L", code: "TB-CF-DXIII", name: "Caja Fluido DXIII", present: "Tambor 208 L", priceUSD: 1163, priceBCV: 1454 },
+  { cat: "TAMBOR 208L", code: "TB-TF", name: "Tracto Fluido", present: "Tambor 208 L", priceUSD: 1094, priceBCV: 1368 },
+  { cat: "TAMBOR 208L", code: "TB-HA-AW32", name: "Hidráulico AW 32", present: "Tambor 208 L", priceUSD: 915, priceBCV: 1144 },
+  { cat: "TAMBOR 208L", code: "TB-HA-AW46", name: "Hidráulico AW 46", present: "Tambor 208 L", priceUSD: 981, priceBCV: 1227 },
+  { cat: "TAMBOR 208L", code: "TB-HA-AW68", name: "Hidráulico AW 68", present: "Tambor 208 L", priceUSD: 997, priceBCV: 1247 },
+  { cat: "TAMBOR 208L", code: "TB-HA-AW100", name: "Hidráulico AW 100", present: "Tambor 208 L", priceUSD: 995, priceBCV: 1244 },
+  { cat: "TAMBOR 208L", code: "TB-HA-AW150", name: "Hidráulico AW 150", present: "Tambor 208 L", priceUSD: 1005, priceBCV: 1257 },
+  { cat: "TAMBOR 208L", code: "TB-CP-100", name: "Compressocark 100", present: "Tambor 208 L", priceUSD: 1044, priceBCV: 1305 },
+  { cat: "TAMBOR 208L", code: "TB-CP-150", name: "Compressocark 150", present: "Tambor 208 L", priceUSD: 1056, priceBCV: 1320 },
+  { cat: "TAMBOR 208L", code: "TB-CP-220", name: "Compressocark 220", present: "Tambor 208 L", priceUSD: 1069, priceBCV: 1337 },
+  { cat: "TAMBOR 208L", code: "TB-EN-150", name: "Engracark 150", present: "Tambor 208 L", priceUSD: 1041, priceBCV: 1302 },
+  { cat: "TAMBOR 208L", code: "TB-EN-220", name: "Engracark 220", present: "Tambor 208 L", priceUSD: 1058, priceBCV: 1323 },
+  { cat: "TAMBOR 208L", code: "TB-EN-320", name: "Engracark 320", present: "Tambor 208 L", priceUSD: 1068, priceBCV: 1335 },
+  { cat: "TAMBOR 208L", code: "TB-EN-460", name: "Engracark 460", present: "Tambor 208 L", priceUSD: 1079, priceBCV: 1349 },
+  { cat: "TAMBOR 208L", code: "TB-EN-680", name: "Engracark 680", present: "Tambor 208 L", priceUSD: 1137, priceBCV: 1422 },
+  { cat: "TAMBOR 208L", code: "TB-TU-32", name: "Turbo Cark 32", present: "Tambor 208 L", priceUSD: 949, priceBCV: 1187 },
+  { cat: "TAMBOR 208L", code: "TB-TU-46", name: "Turbo Cark 46", present: "Tambor 208 L", priceUSD: 1020, priceBCV: 1275 },
+  { cat: "TAMBOR 208L", code: "TB-TU-68", name: "Turbo Cark 68", present: "Tambor 208 L", priceUSD: 1021, priceBCV: 1277 },
+  { cat: "TAMBOR 208L", code: "TB-TU-100", name: "Turbo Cark 100", present: "Tambor 208 L", priceUSD: 1038, priceBCV: 1298 },
+  { cat: "TAMBOR 208L", code: "TB-TU-150", name: "Turbo Cark 150", present: "Tambor 208 L", priceUSD: 1056, priceBCV: 1320 },
+  { cat: "TAMBOR 208L", code: "TB-CG-40", name: "Cark Gas 40", present: "Tambor 208 L", priceUSD: 1260, priceBCV: 1575 },
+  { cat: "TAMBOR 208L", code: "TB-SB", name: "Solubcark", present: "Tambor 208 L", priceUSD: 1390, priceBCV: 1738 },
+  { cat: "TAMBOR 208L", code: "TB-TR-32", name: "Termo Cark 32", present: "Tambor 208 L", priceUSD: 908, priceBCV: 1135 },
+  { cat: "TAMBOR 208L", code: "TB-TR-100", name: "Termo Cark 100", present: "Tambor 208 L", priceUSD: 985, priceBCV: 1232 },
+  { cat: "TAMBOR 208L", code: "TB-TR-150", name: "Termo Cark 150", present: "Tambor 208 L", priceUSD: 1005, priceBCV: 1257 },
+  { cat: "TAMBOR 208L", code: "TB-PC-32", name: "Puro Cark 32", present: "Tambor 208 L", priceUSD: 898, priceBCV: 1123 },
+  { cat: "TAMBOR 208L", code: "TB-PC-68", name: "Puro Cark 68", present: "Tambor 208 L", priceUSD: 991, priceBCV: 1239 },
+  { cat: "TAMBOR 208L", code: "TB-PC-100", name: "Puro Cark 100", present: "Tambor 208 L", priceUSD: 997, priceBCV: 1247 },
+  { cat: "TAMBOR 208L", code: "TB-FC-68", name: "Friocark 68", present: "Tambor 208 L", priceUSD: 911, priceBCV: 1139 },
+
+  // A GRANEL (Precio/Litro)
+  { cat: "A GRANEL", code: "GR-SST-15W40", name: "Titanium SN 15W40", present: "Litro", priceUSD: 4.85, priceBCV: 6.07 },
+  { cat: "A GRANEL", code: "GR-SST-20W50", name: "Titanium SN 20W50", present: "Litro", priceUSD: 4.86, priceBCV: 6.08 },
+  { cat: "A GRANEL", code: "GR-SC-SL15W40", name: "Super Cark SL 15W40", present: "Litro", priceUSD: 4.49, priceBCV: 5.62 },
+  { cat: "A GRANEL", code: "GR-SC-SL20W50", name: "Super Cark SL 20W50", present: "Litro", priceUSD: 4.49, priceBCV: 5.62 },
+  { cat: "A GRANEL", code: "GR-MD-CF50", name: "Mega Diesel CF-50", present: "Litro", priceUSD: 4.58, priceBCV: 5.73 },
+  { cat: "A GRANEL", code: "GR-OP-CI4-15W40", name: "Optimus CI 15W40", present: "Litro", priceUSD: 4.99, priceBCV: 6.24 },
+  { cat: "A GRANEL", code: "GR-OP-CI4-20W50", name: "Optimus CI 20W50", present: "Litro", priceUSD: 4.95, priceBCV: 6.19 },
+  { cat: "A GRANEL", code: "GR-TC-80W90", name: "Transcark 80W90 GL-5", present: "Litro", priceUSD: 5.11, priceBCV: 6.39 },
+  { cat: "A GRANEL", code: "GR-TC-85W140", name: "Transcark 85W140 GL-5", present: "Litro", priceUSD: 5.24, priceBCV: 6.55 },
+  { cat: "A GRANEL", code: "GR-CF-DXIII", name: "Caja Fluido DXIII", present: "Litro", priceUSD: 4.98, priceBCV: 6.23 },
+  { cat: "A GRANEL", code: "GR-TF", name: "Tracto Fluido", present: "Litro", priceUSD: 4.63, priceBCV: 5.79 },
+  { cat: "A GRANEL", code: "GR-HA-AW32", name: "Hidráulico AW 32", present: "Litro", priceUSD: 4.03, priceBCV: 5.04 },
+  { cat: "A GRANEL", code: "GR-HA-AW46", name: "Hidráulico AW 46", present: "Litro", priceUSD: 4.34, priceBCV: 5.43 },
+  { cat: "A GRANEL", code: "GR-HA-AW68", name: "Hidráulico AW 68", present: "Litro", priceUSD: 4.41, priceBCV: 5.52 },
+  { cat: "A GRANEL", code: "GR-HA-AW100", name: "Hidráulico AW 100", present: "Litro", priceUSD: 4.41, priceBCV: 5.52 },
+  { cat: "A GRANEL", code: "GR-HA-AW150", name: "Hidráulico AW 150", present: "Litro", priceUSD: 4.41, priceBCV: 5.52 },
+  { cat: "A GRANEL", code: "GR-CP-100", name: "Compressocark 100", present: "Litro", priceUSD: 4.38, priceBCV: 5.48 },
+  { cat: "A GRANEL", code: "GR-CP-150", name: "Compressocark 150", present: "Litro", priceUSD: 4.46, priceBCV: 5.58 },
+  { cat: "A GRANEL", code: "GR-CP-220", name: "Compressocark 220", present: "Litro", priceUSD: 4.48, priceBCV: 5.60 },
+  { cat: "A GRANEL", code: "GR-EN-150", name: "Engracark 150", present: "Litro", priceUSD: 4.42, priceBCV: 5.53 },
+  { cat: "A GRANEL", code: "GR-EN-220", name: "Engracark 220", present: "Litro", priceUSD: 4.50, priceBCV: 5.63 },
+  { cat: "A GRANEL", code: "GR-EN-320", name: "Engracark 320", present: "Litro", priceUSD: 4.54, priceBCV: 5.68 },
+  { cat: "A GRANEL", code: "GR-EN-460", name: "Engracark 460", present: "Litro", priceUSD: 4.63, priceBCV: 5.79 },
+  { cat: "A GRANEL", code: "GR-PC-32", name: "Puro Cark 32", present: "Litro", priceUSD: 3.80, priceBCV: 4.75 },
+  { cat: "A GRANEL", code: "GR-PC-68", name: "Puro Cark 68", present: "Litro", priceUSD: 4.38, priceBCV: 5.48 },
+  { cat: "A GRANEL", code: "GR-PC-100", name: "Puro Cark 100", present: "Litro", priceUSD: 4.24, priceBCV: 5.30 },
+  { cat: "A GRANEL", code: "GR-FC-68", name: "Friocark 68", present: "Litro", priceUSD: 4.08, priceBCV: 5.10 }
+];
+
+// ========== VARIABLES GLOBALES ==========
+const quantities = {};
+const customPrices = {};
+let signaturePad;
+let sealDataURL = null;
+let isUpdatingPrice = false;
+
+// ========== FUNCIONES DE CATÁLOGO Y PRECIOS ==========
+function getPriceUSD(item) {
+  if (customPrices[item.code] && customPrices[item.code].usd !== undefined) {
+    return customPrices[item.code].usd;
+  }
+  return item.priceUSD;
+}
+
+function getPriceBCV(item) {
+  if (customPrices[item.code] && customPrices[item.code].bcv !== undefined) {
+    return customPrices[item.code].bcv;
+  }
+  return item.priceBCV;
+}
+
+function getApplicablePrice(item, paymentType) {
+  if (paymentType.includes('dólares')) {
+    return getPriceUSD(item);
+  } else {
+    return getPriceBCV(item);
+  }
+}
+
+function updateTotals() {
+  const paymentType = document.getElementById('app-pago').value;
+  const tasa = parseFloat(document.getElementById('app-tasa').value) || 0;
+  let totalBaseUSD = 0;
+
+  catalog.forEach(item => {
+    const qty = quantities[item.code];
+    if (qty && parseInt(qty) > 0) {
+      const price = getApplicablePrice(item, paymentType);
+      totalBaseUSD += price * parseInt(qty);
+    }
+  });
+
+  const totalVES = totalBaseUSD * tasa;
+  document.getElementById('total-usd').textContent = `$${totalBaseUSD.toFixed(2)}`;
+  document.getElementById('total-ves').textContent = `Bs. ${totalVES.toFixed(2)}`;
+}
+
+function highlightApplicablePriceColumns() {
+  const paymentType = document.getElementById('app-pago').value;
+  const isUSD = paymentType.includes('dólares');
+  document.querySelectorAll('.product-item').forEach(itemEl => {
+    const usdInput = itemEl.querySelector('input[data-currency="usd"]');
+    const bcvInput = itemEl.querySelector('input[data-currency="bcv"]');
+    if (usdInput && bcvInput) {
+      usdInput.style.backgroundColor = isUSD ? '#e6f7ff' : '';
+      bcvInput.style.backgroundColor = !isUSD ? '#e6f7ff' : '';
+    }
+  });
+}
+
+function renderCatalog(items) {
+  const container = document.getElementById('product-list-container');
+  container.innerHTML = '';
+  if (items.length === 0) {
+    container.innerHTML = '<div style="padding:15px; text-align:center; color:#718096;">No se encontraron productos.</div>';
+    return;
+  }
+
+  items.forEach((item) => {
+    const qty = quantities[item.code] || '';
+    const usdVal = getPriceUSD(item);
+    const bcvVal = getPriceBCV(item);
+
+    container.innerHTML += `
+      <div class="product-item" data-code="${item.code}">
+        <div class="product-info">
+          <span class="product-category">${item.cat}</span><br>
+          <b>${item.name}</b> (${item.present})<br>
+          <small style="color:#666;">CÓD: ${item.code}</small>
+        </div>
+        <div class="product-prices">
+          <div class="price-field">
+            <span>$</span>
+            <input type="number" step="0.01" min="0" value="${usdVal.toFixed(2)}" 
+                   oninput="handlePriceEdit('${item.code}', 'usd', this.value)" 
+                   data-code="${item.code}" data-currency="usd" 
+                   title="Precio USD (aplica si paga en dólares)">
+          </div>
+          <div class="price-field">
+            <span>BCV $</span>
+            <input type="number" step="0.01" min="0" value="${bcvVal.toFixed(2)}" 
+                   oninput="handlePriceEdit('${item.code}', 'bcv', this.value)" 
+                   data-code="${item.code}" data-currency="bcv" 
+                   title="Precio BCV (USD) (aplica si paga en bolívares)">
+          </div>
+        </div>
+        <div class="product-qty">
+          <input type="number" min="0" value="${qty}" placeholder="0" 
+                 oninput="updateQty('${item.code}', this.value)">
+        </div>
+      </div>
+    `;
+  });
+
+  highlightApplicablePriceColumns();
+}
+
+function handlePriceEdit(code, currency, value) {
+  if (isUpdatingPrice) return;
+  const numValue = parseFloat(value);
+  if (isNaN(numValue) || numValue < 0) return;
+
+  isUpdatingPrice = true;
+
+  if (!customPrices[code]) {
+    const baseItem = catalog.find(p => p.code === code);
+    customPrices[code] = {
+      usd: baseItem.priceUSD,
+      bcv: baseItem.priceBCV
+    };
+  }
+
+  const tasa = parseFloat(document.getElementById('app-tasa').value) || 0;
+
+  if (currency === 'usd') {
+    customPrices[code].usd = numValue;
+    if (tasa > 0) {
+      customPrices[code].bcv = numValue * tasa;
+    }
+  } else if (currency === 'bcv') {
+    customPrices[code].bcv = numValue;
+    if (tasa > 0) {
+      customPrices[code].usd = numValue / tasa;
+    }
+  }
+
+  const container = document.querySelector(`.product-item[data-code="${code}"]`);
+  if (container) {
+    const usdInput = container.querySelector('input[data-currency="usd"]');
+    const bcvInput = container.querySelector('input[data-currency="bcv"]');
+    if (usdInput && currency !== 'usd') usdInput.value = customPrices[code].usd.toFixed(2);
+    if (bcvInput && currency !== 'bcv') bcvInput.value = customPrices[code].bcv.toFixed(2);
+  }
+
+  isUpdatingPrice = false;
+  updateTotals();
+}
+
+function updateQty(code, value) {
+  quantities[code] = value;
+  updateTotals();
+}
+
+function filterProducts() {
+  const query = document.getElementById('search-input').value.toLowerCase().trim();
+  if (!query) {
+    renderCatalog(catalog);
+    return;
+  }
+  const filtered = catalog.filter(p => 
+    p.name.toLowerCase().includes(query) || 
+    p.code.toLowerCase().includes(query) || 
+    p.present.toLowerCase().includes(query) || 
+    p.cat.toLowerCase().includes(query)
+  );
+  renderCatalog(filtered);
+}
+
+// ========== INICIALIZACIÓN DE FIRMA ==========
+window.addEventListener('DOMContentLoaded', () => {
+  const canvas = document.getElementById('signature-canvas');
+  signaturePad = new SignaturePad(canvas, {
+    backgroundColor: 'rgba(255, 255, 255, 0)',
+    penColor: 'rgb(0, 0, 0)'
+  });
+  
+  function resizeCanvas() {
+    const container = canvas.parentElement;
+    const width = container.offsetWidth - 10;
+    const height = 120; // Altura fija
+    const ratio = Math.max(window.devicePixelRatio || 1, 1);
+    canvas.width = width * ratio;
+    canvas.height = height * ratio;
+    canvas.getContext('2d').scale(ratio, ratio);
+    canvas.style.width = width + 'px';
+    canvas.style.height = height + 'px';
+    if (signaturePad) signaturePad.clear();
+  }
+  
+  window.addEventListener('resize', resizeCanvas);
+  setTimeout(resizeCanvas, 100);
+});
+
+function clearSignature() {
+  if (signaturePad) signaturePad.clear();
+}
+
+// ========== CAPTURA DE SELLO ==========
+function handleSealUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    sealDataURL = e.target.result;
+    const preview = document.getElementById('seal-preview');
+    preview.src = sealDataURL;
+    preview.style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+
+// ========== GENERACIÓN DE QR ==========
+function generateQRCode(url) {
+  return new Promise((resolve) => {
+    const qrContainer = document.createElement('div');
+    qrContainer.style.position = 'fixed';
+    qrContainer.style.left = '-9999px';
+    document.body.appendChild(qrContainer);
+    const qr = new QRCode(qrContainer, {
+      text: url,
+      width: 80,
+      height: 80,
+      colorDark: '#000000',
+      colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.H
+    });
+    setTimeout(() => {
+      const img = qrContainer.querySelector('img');
+      const canvas = qrContainer.querySelector('canvas');
+      let dataURL;
+      if (img) dataURL = img.src;
+      else if (canvas) dataURL = canvas.toDataURL('image/png');
+      qrContainer.remove();
+      resolve(dataURL);
+    }, 100);
+  });
+}
+
+// ========== CONSTRUIR HTML DEL PDF ==========
+function buildPdfHTML(cliente, rif, vendedor, pago, dias, horario, obs, items, totalApplicableUSD, totalApplicableVES, signatureDataURL, sealDataURL, qrDataURL, priceDisplayMode, tasa) {
+  const isUSD = pago.includes('dólares');
+  const showUSD = (priceDisplayMode === 'ambos' || (priceDisplayMode === 'pago' && isUSD));
+  const showBCV = (priceDisplayMode === 'ambos' || (priceDisplayMode === 'pago' && !isUSD));
+
+  let headerCols = `
+    <th>CÓDIGO</th>
+    <th>PRODUCTO</th>
+    <th>PRESENTACIÓN</th>
+  `;
+  if (showUSD) headerCols += `<th class="center">PRECIO USD</th>`;
+  if (showBCV) headerCols += `<th class="center">PRECIO Bs.</th>`;
+  headerCols += `<th class="center">CANT.</th>`;
+
+  let rows = '';
+  items.forEach(item => {
+    const usdPrice = item.priceUSD;
+    const bcvUSDPrice = item.priceBCV;
+    const bcvBsPrice = bcvUSDPrice * tasa;
+
+    rows += `<tr>
+      <td>${item.code}</td>
+      <td>${item.name}</td>
+      <td>${item.present}</td>`;
+    if (showUSD) rows += `<td class="center">$${usdPrice.toFixed(2)}</td>`;
+    if (showBCV) rows += `<td class="center">Bs. ${bcvBsPrice.toFixed(2)}</td>`;
+    rows += `<td class="center"><b>${item.qty}</b></td></tr>`;
+  });
+
+  const signatureImg = signatureDataURL ? `<img src="${signatureDataURL}" alt="Firma">` : '';
+  const sealImg = sealDataURL ? `<img src="${sealDataURL}" alt="Sello">` : '';
+  const qrImg = qrDataURL ? `<img src="${qrDataURL}" alt="QR">` : '';
+
+  return `
+    <div class="pdf-page">
+      <div class="pdf-header">
+        <div class="pdf-logo-container">
+          <svg class="pdf-logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 100">
+            <rect width="200" height="100" fill="#1a365d" rx="10" ry="10"/>
+            <text x="100" y="45" font-family="Arial, sans-serif" font-size="24" fill="#ffffff" text-anchor="middle" font-weight="bold">CJTA</text>
+            <text x="100" y="70" font-family="Arial, sans-serif" font-size="12" fill="#cbd5e1" text-anchor="middle">Lubricantes CARK</text>
+          </svg>
+        </div>
+        <div class="pdf-title">
+          <h1>DISTRIBUIDORA CJTA - LUBRICANTES CARK</h1>
+          <h2>HOJA DE PEDIDO DE COMPRA</h2>
+        </div>
+        <div class="pdf-qr-container">
+          ${qrImg}
+          <div class="pdf-qr-label">Escanear para ubicación GPS</div>
+        </div>
+      </div>
+
+      <div style="margin-bottom: 10px; font-size: 11px;">
+        <b>Fecha:</b> ${new Date().toLocaleDateString('es-VE')} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        <b>Cliente:</b> ${cliente} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        <b>RIF:</b> ${rif} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        <b>Vendedor:</b> ${vendedor}
+      </div>
+
+      <table class="pdf-table">
+        <thead>
+          <tr>${headerCols}</tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+
+      <div class="pdf-totals">
+        <b>Tasa de Cambio:</b> Bs. ${tasa.toFixed(2)} / USD<br>
+        <b>Total a Pagar (USD):</b> $${totalApplicableUSD.toFixed(2)}<br>
+        <b>Total a Pagar (Bolívares):</b> Bs. ${totalApplicableVES.toFixed(2)}
+      </div>
+
+      <div class="pdf-footer">
+        <b>Forma de pago:</b> ${pago} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        <b>Días de crédito:</b> ${dias}<br>
+        <b>Horario de recepción:</b> ${horario}<br>
+        <b>Observaciones / Condiciones:</b> ${obs}
+      </div>
+
+      <div class="pdf-signature-section">
+        <div class="pdf-signature-box">
+          ${signatureImg}
+          <div class="label">Firma del Cliente</div>
+        </div>
+        <div class="pdf-signature-box">
+          ${sealImg}
+          <div class="label">Sello de la Empresa / Recepción</div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// ========== GENERAR PDF ==========
+async function generatePDF() {
+  const btn = document.getElementById('btn-generate');
+  btn.disabled = true;
+  btn.textContent = '⏳ GENERANDO PDF...';
+
+  try {
+    const cliente = document.getElementById('app-cliente').value || 'N/A';
+    const rif = document.getElementById('app-rif').value || 'N/A';
+    const vendedor = document.getElementById('app-vendedor').value || 'N/A';
+    const pago = document.getElementById('app-pago').value;
+    const dias = document.getElementById('app-dias').value || '0';
+    const horario = document.getElementById('app-horario').value || 'N/A';
+    const obs = document.getElementById('app-obs').value || 'Ninguna';
+    const locationURL = document.getElementById('app-location').value.trim();
+    const priceDisplayMode = document.getElementById('app-price-display').value;
+    const tasa = parseFloat(document.getElementById('app-tasa').value) || 0;
+
+    const selectedItems = [];
+    let totalApplicableUSD = 0;
+
+    catalog.forEach(item => {
+      const qty = quantities[item.code];
+      if (qty && parseInt(qty) > 0) {
+        const usdPrice = getPriceUSD(item);
+        const bcvPrice = getPriceBCV(item);
+        const applicablePrice = getApplicablePrice(item, pago);
+        totalApplicableUSD += applicablePrice * parseInt(qty);
+
+        selectedItems.push({
+          ...item,
+          qty: parseInt(qty),
+          priceUSD: usdPrice,
+          priceBCV: bcvPrice
+        });
+      }
+    });
+
+    if (selectedItems.length === 0) {
+      alert('Por favor coloca al menos un producto con cantidad mayor a 0 antes de generar el PDF.');
+      btn.disabled = false;
+      btn.textContent = '📄 GENERAR Y DESCARGAR PDF';
+      return;
+    }
+
+    const totalApplicableVES = totalApplicableUSD * tasa;
+
+    const signatureDataURL = signaturePad.isEmpty() ? null : signaturePad.toDataURL('image/png');
+    const qrDataURL = locationURL ? await generateQRCode(locationURL) : null;
+
+    const tempDiv = document.createElement('div');
+    tempDiv.className = 'pdf-temp-container';
+    tempDiv.innerHTML = buildPdfHTML(
+      cliente, rif, vendedor, pago, dias, horario, obs,
+      selectedItems, totalApplicableUSD, totalApplicableVES,
+      signatureDataURL, sealDataURL, qrDataURL, priceDisplayMode, tasa
+    );
+    document.body.appendChild(tempDiv);
+
+    await new Promise(resolve => {
+      const images = tempDiv.querySelectorAll('img');
+      let loaded = 0;
+      if (images.length === 0) resolve();
+      images.forEach(img => {
+        img.onload = () => {
+          loaded++;
+          if (loaded === images.length) resolve();
+        };
+        img.onerror = () => {
+          img.style.display = 'none';
+          loaded++;
+          if (loaded === images.length) resolve();
+        };
+        if (img.complete) {
+          loaded++;
+          if (loaded === images.length) resolve();
+        }
+      });
+    });
+
+    const canvas = await html2canvas(tempDiv, {
+      scale: 2,
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: '#ffffff'
+    });
+    tempDiv.remove();
+
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const imgData = canvas.toDataURL('image/jpeg', 0.98);
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = pdf.internal.pageSize.getHeight();
+    const imgWidth = canvas.width;
+    const imgHeight = canvas.height;
+    const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+    const imgX = (pdfWidth - imgWidth * ratio) / 2;
+    const imgY = 0;
+
+    pdf.addImage(imgData, 'JPEG', imgX, imgY, imgWidth * ratio, imgHeight * ratio);
+
+    let heightLeft = imgHeight * ratio - pdfHeight;
+    let position = -pdfHeight;
+    while (heightLeft > 0) {
+      pdf.addPage();
+      pdf.addImage(imgData, 'JPEG', imgX, position, imgWidth * ratio, imgHeight * ratio);
+      heightLeft -= pdfHeight;
+      position -= pdfHeight;
+    }
+
+    pdf.save(`Pedido_${cliente.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`);
+
+    btn.textContent = '📄 GENERAR Y DESCARGAR PDF';
+    btn.disabled = false;
+  } catch (error) {
+    console.error('Error al generar PDF:', error);
+    alert('Ocurrió un error al generar el PDF. Inténtalo de nuevo.');
+    btn.textContent = '📄 GENERAR Y DESCARGAR PDF';
+    btn.disabled = false;
+  }
+}
+
+// ========== INICIALIZAR ==========
+renderCatalog(catalog);
+updateTotals();
+
+document.getElementById('app-pago').addEventListener('change', () => {
+  updateTotals();
+  highlightApplicablePriceColumns();
+});
+</script>
+
+<!-- Registro del Service Worker para PWA -->
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('service-worker.js')
+        .then(registration => {
+          console.log('Service Worker registrado con éxito:', registration.scope);
+        })
+        .catch(error => {
+          console.log('Error al registrar el Service Worker:', error);
+        });
+    });
+  }
+</script>
+
+</body>
+</html>
