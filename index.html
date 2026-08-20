@@ -24,9 +24,25 @@
   body { font-family: Arial, sans-serif; background-color: #f4f6f9; margin: 0; padding: 10px; color: #333; }
   .app-container { max-width: 650px; margin: 0 auto; background: #fff; border-radius: 12px; padding: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
 
-  .app-header { text-align: center; border-bottom: 2px solid #1a365d; padding-bottom: 10px; margin-bottom: 15px; }
-  .app-header img { max-width: 140px; height: auto; display: block; margin: 0 auto 8px auto; }
-  .app-header h1 { font-size: 18px; color: #1a365d; margin: 5px 0 0 0; text-transform: uppercase; font-weight: bold; }
+  .app-header { 
+    display: flex; 
+    align-items: center; 
+    justify-content: space-between; 
+    border-bottom: 2px solid #1a365d; 
+    padding-bottom: 10px; 
+    margin-bottom: 15px; 
+  }
+  .app-header img { 
+    width: 60px; 
+    height: 60px; 
+    object-fit: contain; 
+    display: block; 
+  }
+  .app-header .header-text { 
+    flex-grow: 1; 
+    text-align: center; 
+  }
+  .app-header h1 { font-size: 18px; color: #1a365d; margin: 0; text-transform: uppercase; font-weight: bold; }
   .app-header h2 { font-size: 13px; color: #4a5568; margin: 2px 0 0 0; }
 
   .form-group { margin-bottom: 12px; }
@@ -87,7 +103,7 @@
   .pdf-page { width: 750px; padding: 20px; font-family: Arial, sans-serif; font-size: 11px; background: #fff; color: #000; box-sizing: border-box; }
   .pdf-header { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 12px; }
   .pdf-logo-container { width: 120px; min-width: 120px; min-height: 60px; }
-  .pdf-logo { width: 110px; height: auto; display: block; }
+  .pdf-logo { width: 90px; height: 90px; object-fit: contain; display: block; }
   .pdf-title { text-align: center; flex-grow: 1; }
   .pdf-title h1 { font-size: 16px; margin: 0; font-weight: bold; }
   .pdf-title h2 { font-size: 12px; margin: 2px 0 0 0; }
@@ -110,6 +126,7 @@
   @media (max-width: 480px) {
     .signature-canvas { height: 100px; }
     .product-prices input { width: 60px; }
+    .app-header img { width: 50px; height: 50px; }
   }
 </style>
 </head>
@@ -117,13 +134,11 @@
 
 <div class="app-container">
   <div class="app-header">
-    <svg width="140" height="60" viewBox="0 0 200 100" style="margin: 0 auto 8px auto; display: block;">
-      <rect width="200" height="100" fill="#1a365d" rx="10" ry="10"/>
-      <text x="100" y="45" font-family="Arial, sans-serif" font-size="24" fill="#ffffff" text-anchor="middle" font-weight="bold">CJTA</text>
-      <text x="100" y="70" font-family="Arial, sans-serif" font-size="12" fill="#cbd5e1" text-anchor="middle">Lubricantes CARK</text>
-    </svg>
-    <h1>DISTRIBUIDORA CJTA</h1>
-    <h2>LUBRICANTES CARK - HOJA DE PEDIDO</h2>
+    <img src="icon-512.png" alt="Logo CJTA">
+    <div class="header-text">
+      <h1>DISTRIBUIDORA CJTA</h1>
+      <h2>LUBRICANTES CARK - HOJA DE PEDIDO</h2>
+    </div>
   </div>
 
   <div class="form-group">
@@ -638,11 +653,7 @@ function buildPdfHTML(cliente, rif, vendedor, pago, dias, horario, obs, items, t
     <div class="pdf-page">
       <div class="pdf-header">
         <div class="pdf-logo-container">
-          <svg class="pdf-logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 100">
-            <rect width="200" height="100" fill="#1a365d" rx="10" ry="10"/>
-            <text x="100" y="45" font-family="Arial, sans-serif" font-size="24" fill="#ffffff" text-anchor="middle" font-weight="bold">CJTA</text>
-            <text x="100" y="70" font-family="Arial, sans-serif" font-size="12" fill="#cbd5e1" text-anchor="middle">Lubricantes CARK</text>
-          </svg>
+          <img src="icon-512.png" class="pdf-logo" alt="Logo CJTA">
         </div>
         <div class="pdf-title">
           <h1>DISTRIBUIDORA CJTA - LUBRICANTES CARK</h1>
