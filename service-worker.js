@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cjta-pedidos-v2';
+const CACHE_NAME = 'cjta-pedidos-v4';
 const urlsToCache = [
   './',
   './index.html',
